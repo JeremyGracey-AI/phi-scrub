@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/JeremyGracey-AI/phi-scrub"
 keywords = ["phi", "pii", "redaction", "hipaa", "deidentification"]
 categories = ["text-processing"]
+exclude = ["python/", "pyproject.toml", "uv.lock", ".github/", "AGENTS.md", "CODEX_PROMPT.md"]
 
 [lib]
 name = "phi_scrub"
@@ -37,3 +38,6 @@ criterion = "0.5"
 [[bench]]
 name = "redact"
 harness = false
+
+[package.metadata]
+
