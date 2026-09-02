@@ -7,7 +7,7 @@
 [![CI](https://github.com/JeremyGracey-AI/phi-scrub/actions/workflows/ci.yml/badge.svg)](https://github.com/JeremyGracey-AI/phi-scrub/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-PHI/PII redaction engine for behavioral-health text. Rust core, Python bindings, single-binary CLI.
+HIPAA-oriented PHI/PII redaction for telehealth and behavioral-health notes. Rust engine, Python package, single-binary CLI.
 
 ## Install
 
