@@ -7,7 +7,7 @@ name = "phi-scrub"
 version = "0.1.0"
 description = "PHI/PII redaction engine for behavioral-health text (Rust core)"
 readme = "README.md"
-license = { text = "MIT OR Apache-2.0" }
+license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 authors = [{ name = "Jeremy Gracey", email = "Jeremy.a.gracey@gmail.com" }]
 classifiers = [
