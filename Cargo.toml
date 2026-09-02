@@ -1,0 +1,39 @@
+[package]
+name = "phi-scrub"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+description = "PHI/PII redaction engine for behavioral-health text"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/JeremyGracey-AI/phi-scrub"
+keywords = ["phi", "pii", "redaction", "hipaa", "deidentification"]
+categories = ["text-processing"]
+
+[lib]
+name = "phi_scrub"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "phi-scrub"
+path = "src/main.rs"
+
+[features]
+default = []
+python = ["dep:pyo3"]
+
+[dependencies]
+regex = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+pyo3 = { version = "0.29", features = ["extension-module"], optional = true }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "redact"
+harness = false

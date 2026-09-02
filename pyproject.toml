@@ -1,0 +1,27 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "phi-scrub"
+version = "0.1.0"
+description = "PHI/PII redaction engine for behavioral-health text (Rust core)"
+readme = "README.md"
+license = { text = "MIT OR Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Jeremy Gracey", email = "Jeremy.a.gracey@gmail.com" }]
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3",
+  "Topic :: Text Processing",
+]
+
+[project.urls]
+Repository = "https://github.com/JeremyGracey-AI/phi-scrub"
+
+[tool.maturin]
+features = ["python"]
+module-name = "phi_scrub"
+
+[dependency-groups]
+dev = ["pytest>=8", "maturin>=1.7"]
