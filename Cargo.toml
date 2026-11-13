@@ -8,7 +8,7 @@ license = "Apache-2.0"
 repository = "https://github.com/JeremyGracey-AI/phi-scrub"
 keywords = ["phi", "pii", "redaction", "hipaa", "deidentification"]
 categories = ["text-processing"]
-exclude = ["python/", "pyproject.toml", "uv.lock", ".github/", "AGENTS.md", "CODEX_PROMPT.md"]
+exclude = ["python/", "pyproject.toml", "uv.lock", ".github/", "AGENTS.md", "CODEX_PROMPT.md", "docs/plans/"]
 
 [lib]
 name = "phi_scrub"
