@@ -92,3 +92,11 @@ fn redaction_serializes_map_as_json_object() {
     assert_eq!(v["text"], "SSN [SSN_1]");
     assert_eq!(v["map"]["[SSN_1]"], "123-45-6789");
 }
+
+#[test]
+fn findings_never_overlap() {
+    let findings = Scrubber::new().detect("8085550100@x.org and 808-555-0100");
+    let found: Vec<Category> = findings.iter().map(|f| f.category).collect();
+    assert_eq!(found, vec![Category::Email, Category::Phone]);
+    assert!(findings[0].end <= findings[1].start);
+}
