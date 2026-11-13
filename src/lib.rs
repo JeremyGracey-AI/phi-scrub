@@ -43,6 +43,8 @@ pub enum Category {
     Phone,
     /// Email address.
     Email,
+    /// National Provider Identifier: ten digits that pass the Luhn check.
+    Npi,
 }
 
 impl Category {
@@ -52,6 +54,7 @@ impl Category {
             Category::Ssn => "[SSN]",
             Category::Phone => "[PHONE]",
             Category::Email => "[EMAIL]",
+            Category::Npi => "[NPI]",
         }
     }
 

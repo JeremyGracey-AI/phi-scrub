@@ -31,6 +31,12 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
             validate: None,
         },
         Detector {
+            category: Category::Npi,
+            regex: re(r"\b[12][0-9]{9}\b"),
+            group: 0,
+            validate: Some(npi_checksum),
+        },
+        Detector {
             category: Category::Phone,
             regex: re(r"(?:\(\d{3}\)|\b\d{3})[-.\s]?\d{3}[-.\s]?\d{4}\b"),
             group: 0,
@@ -44,3 +50,30 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
         },
     ]
 });
+
+/// True when ten NPI digits pass the Luhn check with the `80840` prefix.
+pub(crate) fn npi_checksum(digits: &str) -> bool {
+    luhn("80840".bytes().chain(digits.bytes()))
+}
+
+/// Luhn check over ASCII digits. Any other byte fails.
+fn luhn(digits: impl DoubleEndedIterator<Item = u8>) -> bool {
+    let mut sum = 0u32;
+    for (i, byte) in digits.rev().enumerate() {
+        if !byte.is_ascii_digit() {
+            return false;
+        }
+        let digit = u32::from(byte - b'0');
+        sum += if i % 2 == 1 {
+            let doubled = digit * 2;
+            if doubled > 9 {
+                doubled - 9
+            } else {
+                doubled
+            }
+        } else {
+            digit
+        };
+    }
+    sum % 10 == 0
+}

@@ -100,3 +100,43 @@ fn findings_never_overlap() {
     assert_eq!(found, vec![Category::Email, Category::Phone]);
     assert!(findings[0].end <= findings[1].start);
 }
+
+/// Each finding as (category, matched text).
+fn found(text: &str) -> Vec<(Category, &str)> {
+    Scrubber::new()
+        .detect(text)
+        .into_iter()
+        .map(|f| (f.category, &text[f.start..f.end]))
+        .collect()
+}
+
+#[test]
+fn npi_passes_luhn_with_80840_prefix() {
+    let text = "NPI 1234567893";
+    assert_eq!(found(text), vec![(Category::Npi, "1234567893")]);
+    assert_eq!(Scrubber::new().redact(text), "NPI [NPI]");
+}
+
+#[test]
+fn ten_digits_failing_luhn_are_not_npi() {
+    assert_eq!(
+        found("NPI 1234567890"),
+        vec![(Category::Phone, "1234567890")]
+    );
+}
+
+#[test]
+fn valid_npi_outranks_phone_on_same_span() {
+    assert_eq!(found("1234567893"), vec![(Category::Npi, "1234567893")]);
+}
+
+#[test]
+fn phone_shaped_number_stays_phone() {
+    assert_eq!(
+        found("call 808-555-0100 or 8085550100"),
+        vec![
+            (Category::Phone, "808-555-0100"),
+            (Category::Phone, "8085550100")
+        ]
+    );
+}
