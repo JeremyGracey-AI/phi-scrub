@@ -23,6 +23,12 @@ pub(crate) struct Detector {
 /// Every detector, in precedence order.
 pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
     let re = |pattern: &str| Regex::new(pattern).expect("valid detector regex");
+    // MBI positions are typed: letters exclude S, L, O, I, B, and Z.
+    let letter = "[AC-HJKMNP-RT-Y]";
+    let either = "[AC-HJKMNP-RT-Y0-9]";
+    let mbi = format!(
+        r"\b[1-9]{letter}{either}[0-9]-?{letter}{either}[0-9]-?{letter}{letter}[0-9][0-9]\b"
+    );
     vec![
         Detector {
             category: Category::Ssn,
@@ -41,6 +47,12 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
             regex: re(r"\b[A-Za-z][A-Za-z9][0-9]{7}\b"),
             group: 0,
             validate: Some(dea_checksum),
+        },
+        Detector {
+            category: Category::Mbi,
+            regex: re(&mbi),
+            group: 0,
+            validate: None,
         },
         Detector {
             category: Category::Phone,

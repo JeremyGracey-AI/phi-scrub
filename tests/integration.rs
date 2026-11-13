@@ -152,3 +152,19 @@ fn dea_checksum_accepts_valid_number() {
 fn dea_checksum_rejects_bad_check_digit() {
     assert_eq!(found("DEA AB1234567"), vec![]);
 }
+
+#[test]
+fn mbi_matches_with_and_without_dashes() {
+    assert_eq!(
+        found("1EG4-TE5-MK73 and 1EG4TE5MK73"),
+        vec![
+            (Category::Mbi, "1EG4-TE5-MK73"),
+            (Category::Mbi, "1EG4TE5MK73")
+        ]
+    );
+}
+
+#[test]
+fn mbi_rejects_excluded_letters() {
+    assert_eq!(found("1SG4TE5MK73"), vec![]);
+}

@@ -47,6 +47,8 @@ pub enum Category {
     Npi,
     /// DEA registration number: two letters, six digits, and a check digit.
     Dea,
+    /// Medicare Beneficiary Identifier: eleven characters in the CMS layout.
+    Mbi,
 }
 
 impl Category {
@@ -58,6 +60,7 @@ impl Category {
             Category::Email => "[EMAIL]",
             Category::Npi => "[NPI]",
             Category::Dea => "[DEA]",
+            Category::Mbi => "[MBI]",
         }
     }
 
