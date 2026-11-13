@@ -10,10 +10,15 @@ const SAMPLES: &[&str] = &[
     "(808) 555-0100",
     "p@x.org",
     "a@b.com",
+    "1234567893",
+    "AB1234563",
+    "1EG4-TE5-MK73",
+    "MRN: 00123456",
     "[SSN_1]",
     "[EMAIL_2]",
     "[PHONE_1]",
     "[SSN_10]",
+    "[NPI_1]",
 ];
 
 const SEPARATORS: &[&str] = &["", " ", ", ", "\n"];

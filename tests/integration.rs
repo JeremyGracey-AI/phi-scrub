@@ -200,3 +200,17 @@ fn labeled_mrn_outranks_npi_and_phone() {
     );
     assert_eq!(found("MRN 8085550100"), vec![(Category::Mrn, "8085550100")]);
 }
+
+#[test]
+fn reversible_tokens_cover_new_categories() {
+    let input = "NPI 1234567893, DEA AB1234563";
+    let r = Scrubber::new().redact_reversible(input);
+    assert_eq!(r.text, "NPI [NPI_1], DEA [DEA_1]");
+    assert_eq!(restore(&r.text, &r.map), input);
+}
+
+#[test]
+fn new_categories_serialize_by_name() {
+    let json = serde_json::to_string(&Scrubber::new().detect("NPI 1234567893")).unwrap();
+    assert!(json.contains("\"Npi\""));
+}
