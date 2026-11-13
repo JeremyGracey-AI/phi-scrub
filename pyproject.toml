@@ -23,5 +23,15 @@ Repository = "https://github.com/JeremyGracey-AI/phi-scrub"
 features = ["python"]
 module-name = "phi_scrub"
 
+# Rebuild the extension when Rust sources change. Without this, `uv run`
+# re-syncs the venv from a cached build and tests run against stale code.
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "Cargo.toml" },
+  { file = "Cargo.lock" },
+  { file = "src/**/*.rs" },
+]
+
 [dependency-groups]
 dev = ["pytest>=8", "maturin>=1.7"]
