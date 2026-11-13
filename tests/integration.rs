@@ -1,4 +1,13 @@
-use phi_scrub::{Category, Scrubber};
+use phi_scrub::{restore, Category, Scrubber, TokenMap};
+
+const NOTE: &str = "Patient 123-45-6789, reach at 808-555-0100 or p@x.org";
+
+fn token_map(pairs: &[(&str, &str)]) -> TokenMap {
+    pairs
+        .iter()
+        .map(|(token, value)| ((*token).to_owned(), (*value).to_owned()))
+        .collect()
+}
 
 #[test]
 fn public_api_roundtrip() {
@@ -17,4 +26,69 @@ fn findings_serialize_to_json() {
     let s = Scrubber::new();
     let json = serde_json::to_string(&s.detect("x 123-45-6789")).unwrap();
     assert!(json.contains("\"Ssn\""));
+}
+
+#[test]
+fn reversible_redaction_numbers_tokens_per_category() {
+    let r = Scrubber::new().redact_reversible(NOTE);
+    assert_eq!(r.text, "Patient [SSN_1], reach at [PHONE_1] or [EMAIL_1]");
+    assert_eq!(r.map.len(), 3);
+    assert_eq!(r.map.get("[SSN_1]"), Some("123-45-6789"));
+    assert_eq!(r.map.get("[PHONE_1]"), Some("808-555-0100"));
+    assert_eq!(r.map.get("[EMAIL_1]"), Some("p@x.org"));
+}
+
+#[test]
+fn restore_returns_the_original_text() {
+    let r = Scrubber::new().redact_reversible(NOTE);
+    assert_eq!(restore(&r.text, &r.map), NOTE);
+}
+
+#[test]
+fn repeated_value_reuses_its_token() {
+    let r = Scrubber::new().redact_reversible("a@b.com then a@b.com and c@d.org");
+    assert_eq!(r.text, "[EMAIL_1] then [EMAIL_1] and [EMAIL_2]");
+    assert_eq!(r.map.len(), 2);
+}
+
+#[test]
+fn token_already_in_input_is_never_issued() {
+    let input = "Template says [SSN_1]; real SSN 123-45-6789";
+    let r = Scrubber::new().redact_reversible(input);
+    assert_eq!(r.text, "Template says [SSN_1]; real SSN [SSN_2]");
+    assert_eq!(r.map.len(), 1);
+    assert_eq!(r.map.get("[SSN_1]"), None);
+    assert_eq!(restore(&r.text, &r.map), input);
+}
+
+#[test]
+fn restore_leaves_unknown_tokens_alone() {
+    assert_eq!(restore("[SSN_9] stays", &TokenMap::new()), "[SSN_9] stays");
+}
+
+#[test]
+fn restore_ignores_keys_that_are_not_tokens() {
+    assert_eq!(restore("x marks", &token_map(&[("x", "y")])), "x marks");
+}
+
+#[test]
+fn restore_is_single_pass() {
+    let map = token_map(&[("[SSN_1]", "[SSN_2]"), ("[SSN_2]", "boom")]);
+    assert_eq!(restore("[SSN_1]", &map), "[SSN_2]");
+}
+
+#[test]
+fn round_trip_with_multibyte_text() {
+    let input = "Señora García — SSN 123-45-6789 ✓";
+    let r = Scrubber::new().redact_reversible(input);
+    assert_eq!(r.text, "Señora García — SSN [SSN_1] ✓");
+    assert_eq!(restore(&r.text, &r.map), input);
+}
+
+#[test]
+fn redaction_serializes_map_as_json_object() {
+    let r = Scrubber::new().redact_reversible("SSN 123-45-6789");
+    let v = serde_json::to_value(&r).unwrap();
+    assert_eq!(v["text"], "SSN [SSN_1]");
+    assert_eq!(v["map"]["[SSN_1]"], "123-45-6789");
 }

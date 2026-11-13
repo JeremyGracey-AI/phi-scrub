@@ -43,6 +43,34 @@ s.redact("SSN 123-45-6789")   # 'SSN [SSN]'
 s.detect("call (808) 555-0100")  # [Finding(start=5, end=19, category='phone')]
 ```
 
+## Reversible redaction
+
+For LLM workflows: redact, send the tokens to the model, then restore its reply. The token map holds the original values, so keep it local and never send it to the model.
+
+```rust
+use phi_scrub::{restore, Scrubber};
+
+let r = Scrubber::new().redact_reversible("SSN 123-45-6789, mail me@example.com");
+// r.text == "SSN [SSN_1], mail [EMAIL_1]"
+let reply = "Confirmed [EMAIL_1] for the patient."; // what the model sent back
+let restored = restore(reply, &r.map);
+// "Confirmed me@example.com for the patient."
+```
+
+```python
+import phi_scrub
+
+s = phi_scrub.Scrubber()
+text, token_map = s.redact_reversible("SSN 123-45-6789, mail me@example.com")
+# text == 'SSN [SSN_1], mail [EMAIL_1]'
+phi_scrub.restore("Confirmed [EMAIL_1] for the patient.", token_map)
+# 'Confirmed me@example.com for the patient.'
+```
+
+- The same value gets the same token within one call.
+- A token that already appears in the input is never issued, so the round trip is byte-exact.
+- `restore` leaves tokens it doesn't know alone.
+
 ## Detectors
 
 | Token | Pattern |
