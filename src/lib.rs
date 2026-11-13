@@ -49,6 +49,8 @@ pub enum Category {
     Dea,
     /// Medicare Beneficiary Identifier: eleven characters in the CMS layout.
     Mbi,
+    /// Medical record number, reported only when a label such as `MRN` precedes it.
+    Mrn,
 }
 
 impl Category {
@@ -61,6 +63,7 @@ impl Category {
             Category::Npi => "[NPI]",
             Category::Dea => "[DEA]",
             Category::Mbi => "[MBI]",
+            Category::Mrn => "[MRN]",
         }
     }
 

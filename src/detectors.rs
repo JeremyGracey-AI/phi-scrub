@@ -37,6 +37,14 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
             validate: None,
         },
         Detector {
+            category: Category::Mrn,
+            regex: re(
+                r"(?i)\b(?:MRN|medical record (?:number|no\.?|#))\s*[:#]?\s*([A-Z0-9][A-Z0-9-]{4,14})\b",
+            ),
+            group: 1,
+            validate: Some(has_digit),
+        },
+        Detector {
             category: Category::Npi,
             regex: re(r"\b[12][0-9]{9}\b"),
             group: 0,
@@ -68,6 +76,12 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
         },
     ]
 });
+
+/// True when the text holds at least one ASCII digit. Keeps a label followed
+/// by a plain word ("MRN pending") from being reported.
+fn has_digit(text: &str) -> bool {
+    text.bytes().any(|byte| byte.is_ascii_digit())
+}
 
 /// True when ten NPI digits pass the Luhn check with the `80840` prefix.
 pub(crate) fn npi_checksum(digits: &str) -> bool {

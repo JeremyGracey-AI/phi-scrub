@@ -168,3 +168,35 @@ fn mbi_matches_with_and_without_dashes() {
 fn mbi_rejects_excluded_letters() {
     assert_eq!(found("1SG4TE5MK73"), vec![]);
 }
+
+#[test]
+fn mrn_requires_a_label() {
+    assert_eq!(found("MRN: 00123456"), vec![(Category::Mrn, "00123456")]);
+}
+
+#[test]
+fn mrn_accepts_spelled_out_label() {
+    assert_eq!(
+        found("Medical Record Number 00123456"),
+        vec![(Category::Mrn, "00123456")]
+    );
+}
+
+#[test]
+fn bare_digits_are_not_mrn() {
+    assert_eq!(found("00123456"), vec![]);
+}
+
+#[test]
+fn mrn_label_without_digits_is_ignored() {
+    assert_eq!(found("MRN pending review"), vec![]);
+}
+
+#[test]
+fn labeled_mrn_outranks_npi_and_phone() {
+    assert_eq!(
+        found("MRN: 1234567893"),
+        vec![(Category::Mrn, "1234567893")]
+    );
+    assert_eq!(found("MRN 8085550100"), vec![(Category::Mrn, "8085550100")]);
+}
