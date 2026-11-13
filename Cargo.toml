@@ -34,6 +34,7 @@ pyo3 = { version = "0.29", features = ["extension-module"], optional = true }
 
 [dev-dependencies]
 criterion = "0.5"
+proptest = { version = "1", default-features = false, features = ["std"] }
 
 [[bench]]
 name = "redact"
