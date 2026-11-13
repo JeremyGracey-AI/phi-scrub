@@ -45,6 +45,8 @@ pub enum Category {
     Email,
     /// National Provider Identifier: ten digits that pass the Luhn check.
     Npi,
+    /// DEA registration number: two letters, six digits, and a check digit.
+    Dea,
 }
 
 impl Category {
@@ -55,6 +57,7 @@ impl Category {
             Category::Phone => "[PHONE]",
             Category::Email => "[EMAIL]",
             Category::Npi => "[NPI]",
+            Category::Dea => "[DEA]",
         }
     }
 

@@ -140,3 +140,15 @@ fn phone_shaped_number_stays_phone() {
         ]
     );
 }
+
+#[test]
+fn dea_checksum_accepts_valid_number() {
+    let text = "DEA AB1234563";
+    assert_eq!(found(text), vec![(Category::Dea, "AB1234563")]);
+    assert_eq!(Scrubber::new().redact(text), "DEA [DEA]");
+}
+
+#[test]
+fn dea_checksum_rejects_bad_check_digit() {
+    assert_eq!(found("DEA AB1234567"), vec![]);
+}

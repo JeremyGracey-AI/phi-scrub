@@ -37,6 +37,12 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
             validate: Some(npi_checksum),
         },
         Detector {
+            category: Category::Dea,
+            regex: re(r"\b[A-Za-z][A-Za-z9][0-9]{7}\b"),
+            group: 0,
+            validate: Some(dea_checksum),
+        },
+        Detector {
             category: Category::Phone,
             regex: re(r"(?:\(\d{3}\)|\b\d{3})[-.\s]?\d{3}[-.\s]?\d{4}\b"),
             group: 0,
@@ -54,6 +60,21 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
 /// True when ten NPI digits pass the Luhn check with the `80840` prefix.
 pub(crate) fn npi_checksum(digits: &str) -> bool {
     luhn("80840".bytes().chain(digits.bytes()))
+}
+
+/// True when a DEA number's last digit equals its check digit,
+/// `(d1 + d3 + d5 + 2 * (d2 + d4 + d6)) % 10`.
+pub(crate) fn dea_checksum(candidate: &str) -> bool {
+    let digits: Vec<u32> = candidate
+        .bytes()
+        .skip(2)
+        .filter(u8::is_ascii_digit)
+        .map(|byte| u32::from(byte - b'0'))
+        .collect();
+    match digits[..] {
+        [d1, d2, d3, d4, d5, d6, check] => (d1 + d3 + d5 + 2 * (d2 + d4 + d6)) % 10 == check,
+        _ => false,
+    }
 }
 
 /// Luhn check over ASCII digits. Any other byte fails.
