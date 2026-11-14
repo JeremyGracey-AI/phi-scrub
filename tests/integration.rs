@@ -220,6 +220,39 @@ fn labeled_mrn_outranks_npi_and_phone() {
 }
 
 #[test]
+fn mrna_is_not_an_mrn_label() {
+    assert_eq!(found("Moderna mRNA-1273, dose 2"), vec![]);
+}
+
+#[test]
+fn mrn_accepts_common_label_formats() {
+    let formats = [
+        "MRN: 00123456",
+        "MRN 00123456",
+        "MRN#00123456",
+        "MRN #: 00123456",
+        "MRN - 00123456",
+        "MRN-00123456",
+        "MRN=00123456",
+        "MRN number 00123456",
+        "MRN No. 00123456",
+        "MRN00123456",
+        "Medical Record #00123456",
+        "medical record no.: 00123456",
+    ];
+    let missed: Vec<&str> = formats
+        .into_iter()
+        .filter(|text| found(text) != vec![(Category::Mrn, "00123456")])
+        .collect();
+    assert_eq!(missed, Vec::<&str>::new(), "not reported as an MRN");
+}
+
+#[test]
+fn mrn_value_may_start_with_a_letter_after_a_separator() {
+    assert_eq!(found("MRN: AB-55512"), vec![(Category::Mrn, "AB-55512")]);
+}
+
+#[test]
 fn reversible_tokens_cover_new_categories() {
     let input = "NPI 1234567893, DEA AB1234563";
     let r = Scrubber::new().redact_reversible(input);

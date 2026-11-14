@@ -1,5 +1,5 @@
-//! Detector table: one pattern per category, an optional validator, and the
-//! capture group that is reported as the finding.
+//! Detector table: each row is a pattern for one category, an optional
+//! validator, and the capture group that is reported as the finding.
 //!
 //! Order matters. When two candidates cover the same span, the detector
 //! listed first wins.
@@ -29,6 +29,10 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
     let mbi = format!(
         r"\b[1-9]{letter}{either}[0-9]-?{letter}{either}[0-9]-?{letter}{letter}[0-9][0-9]\b"
     );
+    // "MRN", optionally followed by "number", "num.", or "no.".
+    let mrn = r"MRN(?:\s*(?:number|num\.?|no\.?))?";
+    // An MRN value after its first character, which each pattern below adds.
+    let mrn_rest = "[A-Z0-9-]{4,14}";
     vec![
         Detector {
             category: Category::Ssn,
@@ -36,13 +40,23 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
             group: 0,
             validate: None,
         },
+        // "MRN" and a separator, or the spelled-out label, then a value that
+        // may start with a letter.
         Detector {
             category: Category::Mrn,
-            regex: re(
-                r"(?i)\b(?:MRN|medical record (?:number|no\.?|#))\s*[:#]?\s*([A-Z0-9][A-Z0-9-]{4,14})\b",
-            ),
+            regex: re(&format!(
+                r"(?i)\b(?:{mrn}[\s:#=-]+|medical record\s*(?:number|num\.?|no\.?|#)[\s:#=-]*)([A-Z0-9]{mrn_rest})\b"
+            )),
             group: 1,
             validate: Some(has_digit),
+        },
+        // A value written straight after "MRN" must start with a digit, so
+        // "mRNA-1273" is not read as an MRN.
+        Detector {
+            category: Category::Mrn,
+            regex: re(&format!(r"(?i)\b{mrn}([0-9]{mrn_rest})\b")),
+            group: 1,
+            validate: None,
         },
         Detector {
             category: Category::Npi,
