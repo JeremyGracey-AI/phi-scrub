@@ -31,8 +31,11 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
     );
     // "MRN", optionally followed by "number", "num.", or "no.".
     let mrn = r"MRN(?:\s*(?:number|num\.?|no\.?))?";
-    // An MRN value after its first character, which each pattern below adds.
-    let mrn_rest = "[A-Z0-9-]{4,14}";
+    // An MRN value after its first character, which each pattern below adds:
+    // the whole run of letters, digits, hyphens, and underscores, ending on a
+    // letter or digit. No length cap and no trailing `\b`, so a match can
+    // never stop partway through an identifier and leave its tail in the clear.
+    let mrn_rest = "[A-Z0-9_-]{3,}[A-Z0-9]";
     vec![
         Detector {
             category: Category::Ssn,
@@ -45,7 +48,7 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
         Detector {
             category: Category::Mrn,
             regex: re(&format!(
-                r"(?i)\b(?:{mrn}[\s:#=-]+|medical record\s*(?:number|num\.?|no\.?|#)[\s:#=-]*)([A-Z0-9]{mrn_rest})\b"
+                r"(?i)\b(?:{mrn}[\s:#=-]+|medical record\s*(?:number|num\.?|no\.?|#)[\s:#=-]*)([A-Z0-9]{mrn_rest})"
             )),
             group: 1,
             validate: Some(has_digit),
@@ -54,7 +57,7 @@ pub(crate) static DETECTORS: LazyLock<Vec<Detector>> = LazyLock::new(|| {
         // "mRNA-1273" is not read as an MRN.
         Detector {
             category: Category::Mrn,
-            regex: re(&format!(r"(?i)\b{mrn}([0-9]{mrn_rest})\b")),
+            regex: re(&format!(r"(?i)\b{mrn}([0-9]{mrn_rest})")),
             group: 1,
             validate: None,
         },

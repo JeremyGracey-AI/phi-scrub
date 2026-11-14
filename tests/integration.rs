@@ -112,10 +112,10 @@ fn found(text: &str) -> Vec<(Category, &str)> {
 
 #[test]
 fn partly_overlapping_matches_merge_into_one_finding() {
-    // The MRN value "12345-123-45-" runs into the SSN "123-45-6789".
-    let text = "MRN: 12345-123-45-6789";
-    assert_eq!(found(text), vec![(Category::Mrn, "12345-123-45-6789")]);
-    assert_eq!(Scrubber::new().redact(text), "MRN: [MRN]");
+    // The phone "808 555 0100" runs into the email "0100@example.com".
+    let text = "808 555 0100@example.com";
+    assert_eq!(found(text), vec![(Category::Phone, text)]);
+    assert_eq!(Scrubber::new().redact(text), "[PHONE]");
 }
 
 #[test]
@@ -250,6 +250,29 @@ fn mrn_accepts_common_label_formats() {
 #[test]
 fn mrn_value_may_start_with_a_letter_after_a_separator() {
     assert_eq!(found("MRN: AB-55512"), vec![(Category::Mrn, "AB-55512")]);
+}
+
+#[test]
+fn mrn_value_is_captured_whole() {
+    // A long or hyphenated value must not be cut off partway through.
+    let values = [
+        "HNL-2024-00012345",
+        "12345-67890-12345-678",
+        "1234567890123456",
+        "ABC-808-555-0100",
+        "12345-123-45-6789",
+    ];
+    let cut_short: Vec<String> = values
+        .into_iter()
+        .map(|value| format!("MRN: {value} seen today"))
+        .filter(|text| found(text) != vec![(Category::Mrn, &text[5..text.len() - 11])])
+        .collect();
+    assert_eq!(cut_short, Vec::<String>::new(), "value not captured whole");
+}
+
+#[test]
+fn mrn_value_drops_trailing_punctuation() {
+    assert_eq!(found("MRN: 12345- next"), vec![(Category::Mrn, "12345")]);
 }
 
 #[test]
