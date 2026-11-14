@@ -14,9 +14,11 @@ const SAMPLES: &[&str] = &[
     "AB1234563",
     "1EG4-TE5-MK73",
     "MRN: 00123456",
-    // Matches that partly overlap and merge into one finding.
+    // A long hyphenated MRN, captured whole.
     "MRN: 12345-123-45-6789",
+    // Matches that partly overlap and merge into one finding.
     "(808) 555-0100@example.com",
+    "808 555 0100@example.com",
     "[SSN_1]",
     "[EMAIL_2]",
     "[PHONE_1]",
