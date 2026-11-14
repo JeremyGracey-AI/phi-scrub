@@ -76,6 +76,7 @@ phi_scrub.restore("Confirmed [EMAIL_1] for the patient.", token_map)
 - The same value gets the same token within one call.
 - A token that already appears in the input is never issued, so the round trip is byte-exact.
 - `restore` leaves tokens it doesn't know alone.
+- Token numbers restart on every call, so `[SSN_1]` from two calls can stand for two different values. Keep each map with the text it came from. A map that carries across the turns of a chat is not built yet.
 
 ## MCP server
 

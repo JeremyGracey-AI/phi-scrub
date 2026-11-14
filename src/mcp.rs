@@ -86,7 +86,7 @@ impl PhiScrub {
 
     #[tool(
         name = "redact",
-        description = "Replace PHI/PII with numbered tokens such as [SSN_1]. Returns the redacted text and a token_map for restore. The token_map holds the original values."
+        description = "Replace PHI/PII with numbered tokens such as [SSN_1]. Returns the redacted text and a token_map for restore. The token_map holds the original values. Numbering restarts on every call, so keep each token_map with the text it came from."
     )]
     fn redact(&self, Parameters(TextArgs { text }): Parameters<TextArgs>) -> Json<RedactResult> {
         let redaction = Scrubber::new().redact_reversible(&text);
