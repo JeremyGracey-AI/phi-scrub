@@ -12,6 +12,8 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       - run: cargo doc --no-deps
+      - run: cargo clippy --all-targets --features mcp -- -D warnings
+      - run: cargo test --features mcp
 
   python:
     runs-on: ${{ matrix.os }}

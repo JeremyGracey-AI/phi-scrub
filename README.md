@@ -28,6 +28,12 @@ echo "SSN 123-45-6789, call 808-555-0100" | phi-scrub
 # SSN [SSN], call [PHONE]
 ```
 
+`main` is ahead of the published 0.1.0. Reversible redaction, the MRN, NPI, DEA, and MBI detectors, and the MCP server arrive in 0.2.0. Until then, install from the repository:
+
+```bash
+cargo install --git https://github.com/JeremyGracey-AI/phi-scrub
+```
+
 ## Use
 
 ```rust
@@ -70,6 +76,28 @@ phi_scrub.restore("Confirmed [EMAIL_1] for the patient.", token_map)
 - The same value gets the same token within one call.
 - A token that already appears in the input is never issued, so the round trip is byte-exact.
 - `restore` leaves tokens it doesn't know alone.
+
+## MCP server
+
+`phi-scrub mcp` serves three tools over stdio. It is opt-in, behind the `mcp` feature, and needs Rust 1.88 or newer.
+
+```bash
+cargo install --git https://github.com/JeremyGracey-AI/phi-scrub --features mcp
+```
+
+```json
+{ "mcpServers": { "phi-scrub": { "command": "phi-scrub", "args": ["mcp"] } } }
+```
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `detect` | `text` | `findings`: byte offsets and categories, never the matched text |
+| `redact` | `text` | `text` with numbered tokens, plus `token_map` |
+| `restore` | `text`, `token_map` | `text` with the original values back |
+
+The server stores nothing. `token_map` holds the original values, so handle it like the PHI it is.
+
+**Who calls the tools matters.** A model that calls `redact` itself has already read the raw text, and it reads the `token_map` in the result. Redaction protects a model only when your own code, or a trusted local agent, calls `redact` first and passes on just the redacted text.
 
 ## Detectors
 
