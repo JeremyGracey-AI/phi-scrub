@@ -150,8 +150,10 @@ impl Scrubber {
 
     /// Return all findings in `text`, sorted by start offset.
     ///
-    /// Findings never overlap. When candidates overlap, the earliest start
-    /// wins, then the longest match, then the detector listed first.
+    /// Findings never overlap. When candidates cover the same text, the
+    /// earliest start wins, then the longest match, then the detector listed
+    /// first. A candidate that only partly overlaps an earlier finding
+    /// extends it, so no detected text is left outside a finding.
     pub fn detect(&self, text: &str) -> Vec<Finding> {
         let mut candidates: Vec<(usize, Finding)> = Vec::new();
         for (rank, detector) in detectors::DETECTORS.iter().enumerate() {
@@ -185,12 +187,13 @@ impl Scrubber {
             }
         }
         candidates.sort_by_key(|(rank, f)| (f.start, std::cmp::Reverse(f.end), *rank));
-        let mut out = Vec::with_capacity(candidates.len());
-        let mut cursor = 0;
+        let mut out: Vec<Finding> = Vec::with_capacity(candidates.len());
         for (_, finding) in candidates {
-            if finding.start >= cursor {
-                cursor = finding.end;
-                out.push(finding);
+            match out.last_mut() {
+                // Overlaps the finding before it: grow that finding to cover
+                // both, so no part of a detected value stays in the clear.
+                Some(last) if finding.start < last.end => last.end = last.end.max(finding.end),
+                _ => out.push(finding),
             }
         }
         out

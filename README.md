@@ -83,7 +83,7 @@ phi_scrub.restore("Confirmed [EMAIL_1] for the patient.", token_map)
 | `[PHONE]` | `(\d{3}) \d{3}-\d{4}` and `\d{3}-\d{3}-\d{4}` variants | format |
 | `[EMAIL]` | RFC-ish local@domain | format |
 
-Findings never overlap. When two detectors match the same text, the row listed first wins: a labeled MRN beats an NPI, and a valid NPI beats a phone number.
+Findings never overlap. When two detectors match the same text, the row listed first wins: a labeled MRN beats an NPI, and a valid NPI beats a phone number. Matches that only partly overlap merge into one finding, so no detected text is left in the clear.
 
 More detectors (names, dates, addresses) on the roadmap.
 

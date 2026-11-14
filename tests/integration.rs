@@ -111,6 +111,24 @@ fn found(text: &str) -> Vec<(Category, &str)> {
 }
 
 #[test]
+fn partly_overlapping_matches_merge_into_one_finding() {
+    // The MRN value "12345-123-45-" runs into the SSN "123-45-6789".
+    let text = "MRN: 12345-123-45-6789";
+    assert_eq!(found(text), vec![(Category::Mrn, "12345-123-45-6789")]);
+    assert_eq!(Scrubber::new().redact(text), "MRN: [MRN]");
+}
+
+#[test]
+fn phone_that_runs_into_an_email_leaves_no_tail() {
+    let text = "(808) 555-0100@example.com";
+    let s = Scrubber::new();
+    assert_eq!(s.redact(text), "[PHONE]");
+    let r = s.redact_reversible(text);
+    assert_eq!(r.text, "[PHONE_1]");
+    assert_eq!(restore(&r.text, &r.map), text);
+}
+
+#[test]
 fn npi_passes_luhn_with_80840_prefix() {
     let text = "NPI 1234567893";
     assert_eq!(found(text), vec![(Category::Npi, "1234567893")]);
