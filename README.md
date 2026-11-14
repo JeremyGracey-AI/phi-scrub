@@ -73,13 +73,19 @@ phi_scrub.restore("Confirmed [EMAIL_1] for the patient.", token_map)
 
 ## Detectors
 
-| Token | Pattern |
-|---|---|
-| `[SSN]` | `\d{3}-\d{2}-\d{4}` |
-| `[PHONE]` | `(\d{3}) \d{3}-\d{4}` and `\d{3}-\d{3}-\d{4}` variants |
-| `[EMAIL]` | RFC-ish local@domain |
+| Token | Detects | Check |
+|---|---|---|
+| `[SSN]` | `\d{3}-\d{2}-\d{4}` | format |
+| `[MRN]` | the value after an `MRN` or `medical record number` label, such as `MRN: …`, `MRN #…`, or `Medical Record No. …` | label, plus at least one digit |
+| `[NPI]` | ten digits starting with 1 or 2 | Luhn with the `80840` prefix |
+| `[DEA]` | two letters and seven digits | DEA check digit |
+| `[MBI]` | eleven characters, dashes optional | CMS position layout |
+| `[PHONE]` | `(\d{3}) \d{3}-\d{4}` and `\d{3}-\d{3}-\d{4}` variants | format |
+| `[EMAIL]` | RFC-ish local@domain | format |
 
-More detectors (names, dates, MRNs, addresses) on the roadmap.
+Findings never overlap. When two detectors match the same text, the row listed first wins: a labeled MRN beats an NPI, and a valid NPI beats a phone number. Matches that only partly overlap merge into one finding, so no detected text is left in the clear.
+
+More detectors (names, dates, addresses) on the roadmap.
 
 ## Develop
 

@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::LazyLock;
 
+mod detectors;
 #[cfg(feature = "python")]
 mod python;
 
@@ -42,6 +43,14 @@ pub enum Category {
     Phone,
     /// Email address.
     Email,
+    /// National Provider Identifier: ten digits that pass the Luhn check.
+    Npi,
+    /// DEA registration number: two letters, six digits, and a check digit.
+    Dea,
+    /// Medicare Beneficiary Identifier: eleven characters in the CMS layout.
+    Mbi,
+    /// Medical record number, reported only when a label such as `MRN` precedes it.
+    Mrn,
 }
 
 impl Category {
@@ -51,6 +60,10 @@ impl Category {
             Category::Ssn => "[SSN]",
             Category::Phone => "[PHONE]",
             Category::Email => "[EMAIL]",
+            Category::Npi => "[NPI]",
+            Category::Dea => "[DEA]",
+            Category::Mbi => "[MBI]",
+            Category::Mrn => "[MRN]",
         }
     }
 
@@ -125,24 +138,6 @@ pub struct Finding {
     pub category: Category,
 }
 
-static PATTERNS: LazyLock<Vec<(Category, Regex)>> = LazyLock::new(|| {
-    vec![
-        (
-            Category::Ssn,
-            Regex::new(r"\b\d{3}-\d{2}-\d{4}\b").expect("valid ssn regex"),
-        ),
-        (
-            Category::Phone,
-            Regex::new(r"(?:\(\d{3}\)|\b\d{3})[-.\s]?\d{3}[-.\s]?\d{4}\b")
-                .expect("valid phone regex"),
-        ),
-        (
-            Category::Email,
-            Regex::new(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b").expect("valid email regex"),
-        ),
-    ]
-});
-
 /// The redaction engine.
 #[derive(Debug, Default, Clone)]
 pub struct Scrubber;
@@ -154,18 +149,53 @@ impl Scrubber {
     }
 
     /// Return all findings in `text`, sorted by start offset.
+    ///
+    /// Findings never overlap. When candidates cover the same text, the
+    /// earliest start wins, then the longest match, then the detector listed
+    /// first. A candidate that only partly overlaps an earlier finding
+    /// extends it, so no detected text is left outside a finding.
     pub fn detect(&self, text: &str) -> Vec<Finding> {
-        let mut out: Vec<Finding> = PATTERNS
-            .iter()
-            .flat_map(|(cat, re)| {
-                re.find_iter(text).map(move |m| Finding {
-                    start: m.start(),
-                    end: m.end(),
-                    category: *cat,
-                })
-            })
-            .collect();
-        out.sort_by_key(|f| (f.start, std::cmp::Reverse(f.end)));
+        let mut candidates: Vec<(usize, Finding)> = Vec::new();
+        for (rank, detector) in detectors::DETECTORS.iter().enumerate() {
+            let mut keep = |start: usize, end: usize| {
+                let valid = match detector.validate {
+                    Some(check) => check(&text[start..end]),
+                    None => true,
+                };
+                if valid {
+                    let category = detector.category;
+                    candidates.push((
+                        rank,
+                        Finding {
+                            start,
+                            end,
+                            category,
+                        },
+                    ));
+                }
+            };
+            if detector.group == 0 {
+                for m in detector.regex.find_iter(text) {
+                    keep(m.start(), m.end());
+                }
+            } else {
+                for caps in detector.regex.captures_iter(text) {
+                    if let Some(m) = caps.get(detector.group) {
+                        keep(m.start(), m.end());
+                    }
+                }
+            }
+        }
+        candidates.sort_by_key(|(rank, f)| (f.start, std::cmp::Reverse(f.end), *rank));
+        let mut out: Vec<Finding> = Vec::with_capacity(candidates.len());
+        for (_, finding) in candidates {
+            match out.last_mut() {
+                // Overlaps the finding before it: grow that finding to cover
+                // both, so no part of a detected value stays in the clear.
+                Some(last) if finding.start < last.end => last.end = last.end.max(finding.end),
+                _ => out.push(finding),
+            }
+        }
         out
     }
 
@@ -175,9 +205,6 @@ impl Scrubber {
         let mut result = String::with_capacity(text.len());
         let mut cursor = 0;
         for f in findings {
-            if f.start < cursor {
-                continue; // overlapping match already consumed
-            }
             result.push_str(&text[cursor..f.start]);
             result.push_str(f.category.token());
             cursor = f.end;
@@ -200,9 +227,6 @@ impl Scrubber {
         let mut result = String::with_capacity(text.len());
         let mut cursor = 0;
         for f in self.detect(text) {
-            if f.start < cursor {
-                continue; // overlapping match already consumed
-            }
             let value = &text[f.start..f.end];
             let token = match issued.get(&(f.category, value)) {
                 Some(token) => token.clone(),

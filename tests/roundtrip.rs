@@ -10,10 +10,20 @@ const SAMPLES: &[&str] = &[
     "(808) 555-0100",
     "p@x.org",
     "a@b.com",
+    "1234567893",
+    "AB1234563",
+    "1EG4-TE5-MK73",
+    "MRN: 00123456",
+    // A long hyphenated MRN, captured whole.
+    "MRN: 12345-123-45-6789",
+    // Matches that partly overlap and merge into one finding.
+    "(808) 555-0100@example.com",
+    "808 555 0100@example.com",
     "[SSN_1]",
     "[EMAIL_2]",
     "[PHONE_1]",
     "[SSN_10]",
+    "[NPI_1]",
 ];
 
 const SEPARATORS: &[&str] = &["", " ", ", ", "\n"];

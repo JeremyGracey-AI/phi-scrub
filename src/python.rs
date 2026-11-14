@@ -1,6 +1,6 @@
 //! Python bindings (enabled with `--features python`, built by maturin).
 
-use crate::{Category, Finding, Scrubber, TokenMap};
+use crate::{Finding, Scrubber, TokenMap};
 use pyo3::prelude::*;
 use std::collections::BTreeMap;
 
@@ -14,23 +14,17 @@ pub struct PyFinding {
     /// Byte offset where the match ends (exclusive).
     #[pyo3(get)]
     pub end: usize,
-    /// Category name: "ssn", "phone", or "email".
+    /// Lowercase category name, e.g. "ssn", "phone", or "email".
     #[pyo3(get)]
     pub category: String,
 }
 
 impl From<Finding> for PyFinding {
     fn from(f: Finding) -> Self {
-        let category = match f.category {
-            Category::Ssn => "ssn",
-            Category::Phone => "phone",
-            Category::Email => "email",
-        }
-        .to_owned();
         Self {
             start: f.start,
             end: f.end,
-            category,
+            category: f.category.label().to_ascii_lowercase(),
         }
     }
 }

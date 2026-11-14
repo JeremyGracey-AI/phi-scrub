@@ -29,3 +29,11 @@ def test_redact_reversible_round_trip():
 
 def test_restore_ignores_unknown_tokens():
     assert phi_scrub.restore("[SSN_9] stays", {}) == "[SSN_9] stays"
+
+
+def test_new_categories():
+    s = phi_scrub.Scrubber()
+    assert s.detect("NPI 1234567893")[0].category == "npi"
+    assert s.detect("AB1234563")[0].category == "dea"
+    assert s.detect("1EG4TE5MK73")[0].category == "mbi"
+    assert s.detect("MRN: 00123456")[0].category == "mrn"

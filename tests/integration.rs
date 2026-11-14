@@ -92,3 +92,199 @@ fn redaction_serializes_map_as_json_object() {
     assert_eq!(v["text"], "SSN [SSN_1]");
     assert_eq!(v["map"]["[SSN_1]"], "123-45-6789");
 }
+
+#[test]
+fn findings_never_overlap() {
+    let findings = Scrubber::new().detect("8085550100@x.org and 808-555-0100");
+    let found: Vec<Category> = findings.iter().map(|f| f.category).collect();
+    assert_eq!(found, vec![Category::Email, Category::Phone]);
+    assert!(findings[0].end <= findings[1].start);
+}
+
+/// Each finding as (category, matched text).
+fn found(text: &str) -> Vec<(Category, &str)> {
+    Scrubber::new()
+        .detect(text)
+        .into_iter()
+        .map(|f| (f.category, &text[f.start..f.end]))
+        .collect()
+}
+
+#[test]
+fn partly_overlapping_matches_merge_into_one_finding() {
+    // The phone "808 555 0100" runs into the email "0100@example.com".
+    let text = "808 555 0100@example.com";
+    assert_eq!(found(text), vec![(Category::Phone, text)]);
+    assert_eq!(Scrubber::new().redact(text), "[PHONE]");
+}
+
+#[test]
+fn phone_that_runs_into_an_email_leaves_no_tail() {
+    let text = "(808) 555-0100@example.com";
+    let s = Scrubber::new();
+    assert_eq!(s.redact(text), "[PHONE]");
+    let r = s.redact_reversible(text);
+    assert_eq!(r.text, "[PHONE_1]");
+    assert_eq!(restore(&r.text, &r.map), text);
+}
+
+#[test]
+fn npi_passes_luhn_with_80840_prefix() {
+    let text = "NPI 1234567893";
+    assert_eq!(found(text), vec![(Category::Npi, "1234567893")]);
+    assert_eq!(Scrubber::new().redact(text), "NPI [NPI]");
+}
+
+#[test]
+fn ten_digits_failing_luhn_are_not_npi() {
+    assert_eq!(
+        found("NPI 1234567890"),
+        vec![(Category::Phone, "1234567890")]
+    );
+}
+
+#[test]
+fn valid_npi_outranks_phone_on_same_span() {
+    assert_eq!(found("1234567893"), vec![(Category::Npi, "1234567893")]);
+}
+
+#[test]
+fn phone_shaped_number_stays_phone() {
+    assert_eq!(
+        found("call 808-555-0100 or 8085550100"),
+        vec![
+            (Category::Phone, "808-555-0100"),
+            (Category::Phone, "8085550100")
+        ]
+    );
+}
+
+#[test]
+fn dea_checksum_accepts_valid_number() {
+    let text = "DEA AB1234563";
+    assert_eq!(found(text), vec![(Category::Dea, "AB1234563")]);
+    assert_eq!(Scrubber::new().redact(text), "DEA [DEA]");
+}
+
+#[test]
+fn dea_checksum_rejects_bad_check_digit() {
+    assert_eq!(found("DEA AB1234567"), vec![]);
+}
+
+#[test]
+fn mbi_matches_with_and_without_dashes() {
+    assert_eq!(
+        found("1EG4-TE5-MK73 and 1EG4TE5MK73"),
+        vec![
+            (Category::Mbi, "1EG4-TE5-MK73"),
+            (Category::Mbi, "1EG4TE5MK73")
+        ]
+    );
+}
+
+#[test]
+fn mbi_rejects_excluded_letters() {
+    assert_eq!(found("1SG4TE5MK73"), vec![]);
+}
+
+#[test]
+fn mrn_requires_a_label() {
+    assert_eq!(found("MRN: 00123456"), vec![(Category::Mrn, "00123456")]);
+}
+
+#[test]
+fn mrn_accepts_spelled_out_label() {
+    assert_eq!(
+        found("Medical Record Number 00123456"),
+        vec![(Category::Mrn, "00123456")]
+    );
+}
+
+#[test]
+fn bare_digits_are_not_mrn() {
+    assert_eq!(found("00123456"), vec![]);
+}
+
+#[test]
+fn mrn_label_without_digits_is_ignored() {
+    assert_eq!(found("MRN pending review"), vec![]);
+}
+
+#[test]
+fn labeled_mrn_outranks_npi_and_phone() {
+    assert_eq!(
+        found("MRN: 1234567893"),
+        vec![(Category::Mrn, "1234567893")]
+    );
+    assert_eq!(found("MRN 8085550100"), vec![(Category::Mrn, "8085550100")]);
+}
+
+#[test]
+fn mrna_is_not_an_mrn_label() {
+    assert_eq!(found("Moderna mRNA-1273, dose 2"), vec![]);
+}
+
+#[test]
+fn mrn_accepts_common_label_formats() {
+    let formats = [
+        "MRN: 00123456",
+        "MRN 00123456",
+        "MRN#00123456",
+        "MRN #: 00123456",
+        "MRN - 00123456",
+        "MRN-00123456",
+        "MRN=00123456",
+        "MRN number 00123456",
+        "MRN No. 00123456",
+        "MRN00123456",
+        "Medical Record #00123456",
+        "medical record no.: 00123456",
+    ];
+    let missed: Vec<&str> = formats
+        .into_iter()
+        .filter(|text| found(text) != vec![(Category::Mrn, "00123456")])
+        .collect();
+    assert_eq!(missed, Vec::<&str>::new(), "not reported as an MRN");
+}
+
+#[test]
+fn mrn_value_may_start_with_a_letter_after_a_separator() {
+    assert_eq!(found("MRN: AB-55512"), vec![(Category::Mrn, "AB-55512")]);
+}
+
+#[test]
+fn mrn_value_is_captured_whole() {
+    // A long or hyphenated value must not be cut off partway through.
+    let values = [
+        "HNL-2024-00012345",
+        "12345-67890-12345-678",
+        "1234567890123456",
+        "ABC-808-555-0100",
+        "12345-123-45-6789",
+    ];
+    let cut_short: Vec<String> = values
+        .into_iter()
+        .map(|value| format!("MRN: {value} seen today"))
+        .filter(|text| found(text) != vec![(Category::Mrn, &text[5..text.len() - 11])])
+        .collect();
+    assert_eq!(cut_short, Vec::<String>::new(), "value not captured whole");
+}
+
+#[test]
+fn mrn_value_drops_trailing_punctuation() {
+    assert_eq!(found("MRN: 12345- next"), vec![(Category::Mrn, "12345")]);
+}
+
+#[test]
+fn reversible_tokens_cover_new_categories() {
+    let input = "NPI 1234567893, DEA AB1234563";
+    let r = Scrubber::new().redact_reversible(input);
+    assert_eq!(r.text, "NPI [NPI_1], DEA [DEA_1]");
+    assert_eq!(restore(&r.text, &r.map), input);
+}
+
+#[test]
+fn new_categories_serialize_by_name() {
+    let json = serde_json::to_string(&Scrubber::new().detect("NPI 1234567893")).unwrap();
+    assert!(json.contains("\"Npi\""));
+}
